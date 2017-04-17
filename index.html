@@ -1,0 +1,132 @@
+<!doctype html>
+<html>
+<head>
+<title>tsk web socket plaground</title>
+<meta charset="utf-8">
+<script src="/socket.io/socket.io.js"></script>
+
+<script src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
+<script src="https://code.highcharts.com/highcharts.js"></script>
+<script src="https://code.highcharts.com/modules/exporting.js"></script>
+
+<script>
+/*
+var socket = io.connect('http://dev-vm-05:8080');
+socket.on('news', function (data) {
+    console.log(data);
+    writeMessage(data);
+    socket.emit('my other event', { my: 'data' });
+});
+
+
+function writeMessage(msg) {
+    var messageLog = document.getElementById("messageLog");
+    if (typeof msg == "object") {
+        messageLog.innerHTML = msg.hello;
+    } else {
+        messageLog.innerHTML = msg;
+    }
+}
+//*/
+
+var ws = new WebSocket('ws://dev-vm-05:8080');
+ws.onopen = function() {
+  console.log('Opened connection ');
+
+}
+
+
+var chartData = {};
+var chartRendered = false;
+ws.addEventListener("message", function(e) {
+    var msg = e.data;
+    document.getElementById('messageLog').innerHTML += '<br>' + msg;
+    if (chartRendered) {
+        return;
+    }
+    chartRendered = true;
+
+    chartData = JSON.parse(msg);
+    console.log(chartData);
+    var options = renderLineChart();
+    jQuery('#container').highcharts(options);
+});
+
+window.addEventListener('beforeunload', function() {
+  socket.close();
+});
+
+function sendMessage(){
+    var message = document.getElementById('message').value;
+    ws.send(message);
+}
+
+// res.vmstat.forks
+function renderLineChart() {
+    var options = {
+        chart: {
+            type: 'spline',
+            animation: Highcharts.svg, // don't animate in old IE
+            marginRight: 10,
+            events: {
+                load: function () {
+
+                    // set up the updating of the chart each second
+                    var series = this.series[0];
+                    alert(series.data);
+                    setInterval(function () {
+                        var x = (new Date()).getTime(), // current time
+                            y = 100;
+                        series.addPoint([x, y], true, true);
+                    }, 1000);
+                }
+            }
+        },
+        title: {
+            text: 'Live random data'
+        },
+        xAxis: {
+            type: 'datetime',
+            tickPixelInterval: 150
+        },
+        yAxis: {
+            title: {
+                text: 'Value'
+            },
+            plotLines: [{
+                value: 0,
+                width: 1,
+                color: '#808080'
+            }]
+        },
+        tooltip: {
+            formatter: function () {
+                return '<b>' + this.series.name + '</b><br/>' +
+                    Highcharts.dateFormat('%Y-%m-%d %H:%M:%S', this.x) + '<br/>' +
+                    Highcharts.numberFormat(this.y, 2);
+            }
+        },
+        legend: {
+            enabled: false
+        },
+        exporting: {
+            enabled: false
+        },
+        series: [{
+            name: 'Random data',
+            data: [chartData.vmstat.forks]
+        }]
+    };
+
+    return options;
+}
+</script>
+</head>
+<body>
+    <div id="container" style="min-width: 310px; height: 400px; margin: 0 auto"></div>
+    <div id="messageLog">
+    </div>
+    <input type="text" id="message" />
+    <input type="button" value="Send" onClick="sendMessage();" />
+</body>
+</html>
